@@ -9,7 +9,10 @@
 	"categories": [
 		"Other"
 	],
-	"activationEvents": [],
+	"activationEvents": [
+		"onLanguage:asm",
+		"onLanguage:lc3asm"
+	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": []
