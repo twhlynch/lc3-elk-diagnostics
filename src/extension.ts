@@ -47,6 +47,11 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidSaveTextDocument(run),
 		vscode.workspace.onDidOpenTextDocument(run),
 	);
+
+	// immediately run on open editors
+	for (const editor of vscode.window.visibleTextEditors) {
+		run(editor.document);
+	}
 }
 
 function parse(output: string): vscode.Diagnostic[] {
