@@ -4,14 +4,13 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-let collection: vscode.DiagnosticCollection;
-let elkPath: string | undefined;
+const RELEASES_URL = 'https://api.github.com/repos/dxrcy/elk/releases/latest';
 
 export async function activate(context: vscode.ExtensionContext) {
-	collection = vscode.languages.createDiagnosticCollection('elk');
+	const collection = vscode.languages.createDiagnosticCollection('elk');
 	context.subscriptions.push(collection);
 
-	elkPath = await resolveElk(context);
+	const elkPath = await resolveElk(context);
 
 	let timeout: NodeJS.Timeout | undefined;
 
@@ -60,6 +59,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 }
 
+export function deactivate() {}
+
 function parse(output: string): vscode.Diagnostic[] {
 	const diagnostics: vscode.Diagnostic[] = [];
 
@@ -96,13 +97,21 @@ async function resolveElk(
 	context: vscode.ExtensionContext,
 ): Promise<string | undefined> {
 	// check for CLI
-	try {
-		const cliPath = execSync('which elk').toString().trim();
-		if (cliPath) {
-			return cliPath;
+	const cliPath = getCliPath();
+
+	if (cliPath) {
+		const current = getCliVersion(cliPath);
+
+		const latest = await getLatestVersion();
+
+		console.log('ELK', current, 'ELK', latest);
+		if (current && isOutdated(current, latest)) {
+			vscode.window.showWarningMessage(
+				`A new version of Elk is available (${current} -> ${latest})`,
+			);
 		}
-	} catch {
-		// ignore
+
+		return cliPath;
 	}
 
 	// check cached install
@@ -110,6 +119,21 @@ async function resolveElk(
 	const cached = path.join(installDir, 'elk');
 
 	if (fs.existsSync(cached)) {
+		// check for update
+		const current = getCliVersion(cached);
+
+		const latest = await getLatestVersion();
+		if (current && isOutdated(current, latest)) {
+			const choice = await vscode.window.showWarningMessage(
+				`A new version of Elk is available (${current} -> ${latest})`,
+				'Update',
+			);
+
+			if (choice === 'Update') {
+				return await installElk(installDir);
+			}
+		}
+
 		return cached;
 	}
 
@@ -127,20 +151,16 @@ async function resolveElk(
 }
 
 async function installElk(installDir: string): Promise<string | undefined> {
-	const platform = process.platform.replace('darwin', 'macos'); // elk uses 'macos'
+	const platform = process.platform === 'darwin' ? 'macos' : process.platform;
 	const arch = process.arch;
 
 	if (!['macos', 'linux'].includes(platform)) {
-		vscode.window.showErrorMessage('Elk only supports macOS and Linux');
+		vscode.window.showErrorMessage('Elk only supports MacOS and Linux');
 		return;
 	}
 
 	// get latest release
-	const res = await fetch(
-		'https://api.github.com/repos/dxrcy/elk/releases/latest',
-	);
-
-	const release: any = await res.json();
+	const release = await getLatestRelease();
 
 	// find supported binary
 	let target = `elk-${platform}-${arch}`;
@@ -163,9 +183,61 @@ async function installElk(installDir: string): Promise<string | undefined> {
 	fs.writeFileSync(filePath, Buffer.from(buffer));
 	fs.chmodSync(filePath, 0o755);
 
-	vscode.window.showInformationMessage('Elk installed');
+	vscode.window.showInformationMessage(
+		'Latest version of Elk has been installed',
+	);
 
 	return filePath;
 }
 
-export function deactivate() {}
+function getCliVersion(bin: string): string | undefined {
+	try {
+		const out = execSync(`"${bin}" --version 2>&1`).toString();
+		return out.replace('elk:', '').trim();
+	} catch {
+		return undefined;
+	}
+}
+
+function getCliPath(): string | undefined {
+	try {
+		return execSync('which elk').toString().trim();
+	} catch {
+		return undefined;
+	}
+}
+
+let latestRelease: any | undefined;
+async function getLatestRelease(): Promise<any | undefined> {
+	if (latestRelease) {
+		return latestRelease;
+	}
+
+	try {
+		const res = await fetch(RELEASES_URL);
+		latestRelease = await res.json();
+		return latestRelease;
+	} catch {
+		return undefined;
+	}
+}
+
+async function getLatestVersion(): Promise<string> {
+	const json = await getLatestRelease();
+	return json.tag_name.replace('v', '');
+}
+
+function isOutdated(current: string, latest: string): boolean {
+	const a = current.split('.').map(Number);
+	const b = latest.split('.').map(Number);
+
+	for (let i = 0; i < 3; i++) {
+		if ((a[i] || 0) < (b[i] || 0)) {
+			return true;
+		}
+		if ((a[i] || 0) > (b[i] || 0)) {
+			return false;
+		}
+	}
+	return false;
+}
