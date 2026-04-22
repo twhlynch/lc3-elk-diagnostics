@@ -11,12 +11,24 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:asm",
 		"onLanguage:lc3asm"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
-		"commands": []
+		"commands": [],
+		"languages": [
+			{
+				"id": "lc3asm",
+				"aliases": [
+					"LC3 Assembly",
+					"lc3asm"
+				],
+				"extensions": [
+					".asm"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",
