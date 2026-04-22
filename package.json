@@ -3,6 +3,7 @@
 	"displayName": "LC-3 Elk Diagnostics",
 	"description": "Diagnostics provider for LC-3 Assembly",
 	"version": "0.0.1",
+	"repository": "https://github.com/twhlynch/lc3-elk-diagnostics",
 	"engines": {
 		"vscode": "^1.116.0"
 	},
