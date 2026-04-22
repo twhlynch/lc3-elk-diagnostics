@@ -1,4 +1,5 @@
 ; https://codeberg.org/dxrcy/elk/src/branch/master/examples/fibonacci.asm
+; https://codeberg.org/dxrcy/elk/src/branch/master/LICENSE
 
 .ORIG 0x3000
 
