@@ -164,7 +164,8 @@ export async function getLatestRelease(): Promise<any | undefined> {
 
 export async function getLatestVersion(): Promise<string> {
 	const json = await getLatestRelease();
-	return json.tag_name.replace('v', '');
+	// 'v1.2.3-ver' -> '1.2.3'
+	return json.tag_name.replace('v', '').split('-')[0];
 }
 
 export function isOutdated(current: string, latest: string): boolean {
