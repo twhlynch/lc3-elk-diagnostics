@@ -30,7 +30,22 @@
 				],
 				"configuration": "./language-configuration.json"
 			}
-		]
+		],
+		"configuration": {
+			"title": "LC-3 Elk Diagnostics",
+			"properties": {
+				"lc3-elk-diagnostics.level": {
+					"type": "string",
+					"enum": [
+						"info",
+						"warn",
+						"err"
+					],
+					"default": "info",
+					"description": "Minimum diagnostic level to report."
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",

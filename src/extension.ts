@@ -15,12 +15,25 @@ export async function activate(context: vscode.ExtensionContext) {
 	const run = (doc: vscode.TextDocument) => {
 		if (!['asm', 'lc3asm'].includes(doc.languageId)) return;
 
-		// create temp file
-		const tmp = path.join(os.tmpdir(), `elk-${Date.now()}.asm`);
-		fs.writeFileSync(tmp, doc.getText());
+		const level = vscode.workspace
+			.getConfiguration('lc3-elk-diagnostics')
+			.get<string>('level', 'err');
 
-		// run elk on temp file
-		exec(`"${elkPath}" "${tmp}" --check --quiet`, (_, stdout, stderr) => {
+		const flags = [
+			'--check', // linting only
+			'--quiet',
+			level === 'err' && '--relaxed', // errors only
+		]
+			.filter(Boolean)
+			.join(' ');
+
+		// create temp file
+		const file = path.join(os.tmpdir(), `elk-${Date.now()}.asm`);
+		fs.writeFileSync(file, doc.getText());
+
+		// run
+		let command = `"${elkPath}" "${file}" ${flags}`;
+		exec(command, (_, stdout, stderr) => {
 			const output = (stdout || '') + (stderr || '');
 
 			// get diagnostics
@@ -28,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			collection.set(doc.uri, diags);
 
 			// remove temp file
-			fs.unlinkSync(tmp);
+			fs.unlinkSync(file);
 		});
 	};
 
@@ -44,6 +57,17 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeTextDocument((e) => trigger(e.document)),
 		vscode.workspace.onDidSaveTextDocument(run),
 		vscode.workspace.onDidOpenTextDocument(run),
+	);
+
+	// update when changing settings
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('lc3-elk-diagnostics.level')) {
+				for (const editor of vscode.window.visibleTextEditors) {
+					run(editor.document);
+				}
+			}
+		}),
 	);
 
 	// immediately run on open editors
