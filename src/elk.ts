@@ -2,9 +2,14 @@ import * as vscode from 'vscode';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { stripAnsi } from './utils';
+import { execAsync, isOutdated, stripAnsi } from './utils';
 import { RELEASES_URL } from './config';
 
+/**
+ * parse elk output to a list of vscode diagnostics
+ *
+ * @param output elk output
+ */
 export function parse(output: string): vscode.Diagnostic[] {
 	const diagnostics: vscode.Diagnostic[] = [];
 
@@ -37,8 +42,13 @@ export function parse(output: string): vscode.Diagnostic[] {
 	return diagnostics;
 }
 
+/**
+ * find elk and install or update if needed
+ *
+ * @param storagePath extension global storage path for caching install
+ */
 export async function resolveElk(
-	context: vscode.ExtensionContext,
+	storagePath: string,
 ): Promise<string | undefined> {
 	// check for CLI
 	const cliPath = getCliPath();
@@ -57,7 +67,7 @@ export async function resolveElk(
 	}
 
 	// check cached install
-	const installDir = path.join(context.globalStorageUri.fsPath, 'bin');
+	const installDir = path.join(storagePath, 'bin');
 	const cached = path.join(installDir, 'elk');
 
 	if (fs.existsSync(cached)) {
@@ -90,28 +100,22 @@ export async function resolveElk(
 	return await installElk(installDir);
 }
 
+/**
+ * install elk latest to a specified location
+ *
+ * @param installDir location to install elk
+ */
 export async function installElk(
 	installDir: string,
 ): Promise<string | undefined> {
-	const platform = process.platform === 'darwin' ? 'macos' : process.platform;
-	const arch = process.arch;
-
-	if (!['macos', 'linux'].includes(platform)) {
+	if (!isSupportedPlatform()) {
 		vscode.window.showErrorMessage('Elk only supports MacOS and Linux');
 		return;
 	}
 
-	// get latest release
-	const release = await getLatestRelease();
-
-	// find supported binary
-	let target = `elk-${platform}-${arch}`;
-	const asset = release.assets.find((a: any) => a.name === target);
-
-	if (!asset) {
-		vscode.window.showErrorMessage(`No Elk binary found for ${target}`);
-		return;
-	}
+	// get latest binary
+	const asset = await getTargetBinary();
+	if (!asset) return;
 
 	// save binary
 	vscode.window.showInformationMessage('Downloading Elk...');
@@ -132,6 +136,54 @@ export async function installElk(
 	return filePath;
 }
 
+/**
+ * run elk on a file
+ *
+ * @param elkPath path to elk binary
+ * @param file path to file to run on
+ */
+export async function runElk(elkPath: string, file: string) {
+	const level = vscode.workspace
+		.getConfiguration('lc3-elk-diagnostics')
+		.get<string>('level', 'err');
+
+	const flags = [
+		'--check', // linting only
+		'--quiet',
+		level === 'err' && '--relaxed', // errors only
+	]
+		.filter(Boolean)
+		.join(' ');
+
+	const command = `"${elkPath}" "${file}" ${flags}`;
+
+	const { stdout, stderr } = await execAsync(command);
+	const output = stdout + stderr;
+
+	return parse(output);
+}
+
+/**
+ * check if the system OS and architecture is supported by elk
+ */
+export function isSupportedPlatform() {
+	return ['darwin', 'linux'].includes(process.platform);
+}
+
+/**
+ * check if a language is supported by elk
+ *
+ * @param lang language id
+ */
+export function isSupportedLanguage(lang: string) {
+	return ['asm', 'lc3asm'].includes(lang);
+}
+
+/**
+ * get the version of an installed elk binary
+ *
+ * @param bin path to binary
+ */
 export function getCliVersion(bin: string): string | undefined {
 	try {
 		const out = execSync(`"${bin}" --version 2>&1`).toString();
@@ -141,6 +193,9 @@ export function getCliVersion(bin: string): string | undefined {
 	}
 }
 
+/**
+ * get the path to elk if it is in PATH
+ */
 export function getCliPath(): string | undefined {
 	try {
 		return execSync('which elk').toString().trim();
@@ -150,6 +205,10 @@ export function getCliPath(): string | undefined {
 }
 
 let latestRelease: any | undefined;
+/**
+ * get the latest release info for elk from github
+ * cached to only request once per session
+ */
 export async function getLatestRelease(): Promise<any | undefined> {
 	if (latestRelease) return latestRelease;
 
@@ -162,20 +221,31 @@ export async function getLatestRelease(): Promise<any | undefined> {
 	}
 }
 
+/**
+ * get the latest release binary supporting the system OS and architecture
+ */
+export async function getTargetBinary(): Promise<any | undefined> {
+	// get latest release
+	const release = await getLatestRelease();
+
+	const platform = process.platform === 'darwin' ? 'macos' : process.platform;
+	const arch = process.arch;
+
+	// find supported binary
+	let target = `elk-${platform}-${arch}`;
+	const asset = release.assets.find((a: any) => a.name === target);
+
+	if (!asset) {
+		vscode.window.showErrorMessage(`No Elk binary found for ${target}`);
+		return undefined;
+	}
+}
+
+/**
+ * get the version of the latest release
+ */
 export async function getLatestVersion(): Promise<string> {
 	const json = await getLatestRelease();
 	// 'v1.2.3-ver' -> '1.2.3'
 	return json.tag_name.replace('v', '').split('-')[0];
-}
-
-export function isOutdated(current: string, latest: string): boolean {
-	const a = current.split('.').map(Number);
-	const b = latest.split('.').map(Number);
-
-	for (let i = 0; i < 3; i++) {
-		if ((a[i] || 0) < (b[i] || 0)) return true;
-		if ((a[i] || 0) > (b[i] || 0)) return false;
-	}
-
-	return false;
 }
