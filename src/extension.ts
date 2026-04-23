@@ -20,7 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		fs.writeFileSync(tmp, doc.getText());
 
 		// run elk on temp file
-		exec(`"${elkPath}" "${tmp}" --quiet`, (_, stdout, stderr) => {
+		exec(`"${elkPath}" "${tmp}" --check --quiet`, (_, stdout, stderr) => {
 			const output = (stdout || '') + (stderr || '');
 
 			// get diagnostics
