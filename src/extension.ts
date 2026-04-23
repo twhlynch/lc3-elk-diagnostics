@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timeout | undefined;
 	const trigger = (doc: vscode.TextDocument) => {
 		if (timeout) clearTimeout(timeout);
-		timeout = setTimeout(() => run(doc), 400);
+		timeout = setTimeout(() => run(doc), 50);
 	};
 
 	// trigger events
