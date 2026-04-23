@@ -145,7 +145,7 @@ export async function installElk(
 export async function runElk(elkPath: string, file: string) {
 	const level = vscode.workspace
 		.getConfiguration('lc3-elk-diagnostics')
-		.get<string>('level', 'err');
+		.get<string>('level', 'info');
 
 	const flags = [
 		'--check', // linting only
