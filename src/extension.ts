@@ -47,7 +47,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	// update when changing settings
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('lc3-elk-diagnostics.level')) {
+			if (
+				e.affectsConfiguration('lc3-elk-diagnostics.level') ||
+				e.affectsConfiguration('lc3-elk-diagnostics.traps')
+			) {
 				for (const editor of vscode.window.visibleTextEditors) {
 					run(editor.document);
 				}

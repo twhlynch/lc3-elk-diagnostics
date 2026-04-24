@@ -43,6 +43,15 @@
 					],
 					"default": "info",
 					"description": "Minimum diagnostic level to report."
+				},
+				"lc3-elk-diagnostics.traps": {
+					"type": "string",
+					"enum": [
+						"base",
+						"elci"
+					],
+					"default": "base",
+					"description": "Set of trap aliases to use."
 				}
 			}
 		}

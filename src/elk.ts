@@ -143,14 +143,16 @@ export async function installElk(
  * @param file path to file to run on
  */
 export async function runElk(elkPath: string, file: string) {
-	const level = vscode.workspace
-		.getConfiguration('lc3-elk-diagnostics')
-		.get<string>('level', 'info');
+	const config = vscode.workspace.getConfiguration('lc3-elk-diagnostics');
+
+	const level = config.get<string>('level', 'info');
+	const traps = config.get<string>('traps', 'base');
 
 	const flags = [
 		'--check', // linting only
 		'--quiet',
 		level === 'err' && '--relaxed', // errors only
+		traps === 'elci' && `--trap-aliases ${trapAliases()}`,
 	]
 		.filter(Boolean)
 		.join(' ');
@@ -161,6 +163,37 @@ export async function runElk(elkPath: string, file: string) {
 	const output = stdout + stderr;
 
 	return parse(output);
+}
+
+/**
+ * build the string argument for the full list of elk trap aliases
+ * includes elci integration
+ */
+export function trapAliases() {
+	// prettier-ignore
+	const trap_aliases = {
+		// base LC-3
+		getc:  0x20,
+		out:   0x21,
+		puts:  0x22,
+		in:    0x23,
+		putsp: 0x24,
+		halt:  0x25,
+		// debug extensions
+		putn:  0x26,
+		reg:   0x27,
+		// ELCI integration
+		chat:  0x28,
+		getp:  0x29,
+		setp:  0x2a,
+		getb:  0x2b,
+		setb:  0x2c,
+		geth:  0x2d,
+	};
+
+	return Object.entries(trap_aliases)
+		.map(([alias, vect]) => `${alias}=0x${vect.toString(16)}`)
+		.join(',');
 }
 
 /**
