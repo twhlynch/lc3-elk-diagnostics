@@ -42,6 +42,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeTextDocument((e) => trigger(e.document)),
 		vscode.workspace.onDidSaveTextDocument(run),
 		vscode.workspace.onDidOpenTextDocument(run),
+		vscode.window.onDidChangeActiveTextEditor((e) => {
+			if (e?.document) run(e.document);
+		}),
 	);
 
 	// update when changing settings
