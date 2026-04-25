@@ -16,13 +16,14 @@ export function parse(output: string): vscode.Diagnostic[] {
 	// remove ansi codes
 	const clean = stripAnsi(output);
 
-	// example `Warning: Error Message (Line 1:0-1:10)`
+	// Warning: Error Message (/path/to/file.asm:1:2-3:4)
 	const regex =
-		/^(Error|Warning):\s+(.*?)\s+\(Line (\d+):(\d+)-(\d+):(\d+)\)/gm;
+		/^(Error|Warning):\s+(.*?)\s+\((.*?):(\d+):(\d+)-(\d+):(\d+)\)/gm;
 
 	let match: RegExpExecArray | null;
 	while ((match = regex.exec(clean))) {
-		const [, sev, msg, ls, cs, le, ce] = match;
+		// for now, ignore the file. TODO: actually use the file path
+		const [, sev, msg, line, ls, cs, le, ce] = match;
 
 		const range = new vscode.Range(
 			Number(ls) - 1,
