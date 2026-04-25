@@ -273,6 +273,8 @@ export async function getTargetBinary(): Promise<any | undefined> {
 		vscode.window.showErrorMessage(`No Elk binary found for ${target}`);
 		return undefined;
 	}
+
+	return asset;
 }
 
 /**
