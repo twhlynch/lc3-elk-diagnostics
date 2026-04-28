@@ -2,7 +2,7 @@
 	"name": "lc3-elk-diagnostics",
 	"displayName": "LC-3 Elk Diagnostics",
 	"description": "Diagnostics provider for LC-3 Assembly",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"repository": "https://github.com/twhlynch/lc3-elk-diagnostics",
 	"publisher": "twhlynch",
 	"icon": "icon.png",
