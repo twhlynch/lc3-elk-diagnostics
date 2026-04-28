@@ -148,12 +148,14 @@ export async function runElk(elkPath: string, file: string) {
 
 	const level = config.get<string>('level', 'info');
 	const traps = config.get<string>('traps', 'base');
+	const permit = config.get<string>('permit', '');
 
 	const flags = [
 		'--check', // linting only
 		'--quiet',
 		level === 'err' && '--relaxed', // errors only
 		traps === 'elci' && `--trap-aliases ${trapAliases()}`,
+		`--permit ${permit}`,
 	]
 		.filter(Boolean)
 		.join(' ');
