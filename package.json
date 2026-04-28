@@ -52,6 +52,11 @@
 					],
 					"default": "base",
 					"description": "Set of trap aliases to use."
+				},
+				"lc3-elk-diagnostics.permit": {
+					"type": "string",
+					"default": "style.undesirable_integer_forms,case.mnemonics,case.trap_aliases,case.labels,case.registers,case.integers",
+					"markdownDescription": "Set of diagnostics to ignore.\n[More info](https://codeberg.org/dxrcy/elk/src/branch/master/DOCS.md#ignoring-lints-and-enabling-extensions)."
 				}
 			}
 		}
